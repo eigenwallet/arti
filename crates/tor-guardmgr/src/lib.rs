@@ -1011,30 +1011,6 @@ impl GuardMgrInner {
         active_guards.expire_old_guards(params, now);
 
         let extended = if let Some(universe) = universe {
-            // TODO: This check here may be completely unnecessary. I inserted
-            // it back in 5ac0fcb7ef603e0d14 because I was originally concerned
-            // it might be undesirable to list a primary guard as "missing dir
-            // info" (and therefore unusable) if we were expecting to get its
-            // microdescriptor "very soon."
-            //
-            // But due to the other check in `netdir_is_sufficient`, we
-            // shouldn't be installing a netdir until it has microdescs for all
-            // of the (non-bridge) primary guards that it lists. - nickm
-            if active_guards.n_primary_without_id_info_in(universe) > 0
-                && universe_type == UniverseType::NetDir
-            {
-                // We are missing the information from a NetDir needed to see
-                // whether our primary guards are listed, so we shouldn't update
-                // our guard status.
-                //
-                // We don't want to do this check if we are using bridges, since
-                // a missing bridge descriptor is not guaranteed to temporary
-                // problem in the same way that a missing microdescriptor is.
-                // (When a bridge desc is missing, the bridge could be down or
-                // unreachable, and nobody else can help us. But if a microdesc
-                // is missing, we just need to find a cache that has it.)
-                return ExtendedStatus::No;
-            }
             active_guards.update_status_from_dir(universe);
             active_guards.extend_sample_as_needed(now, params, universe)
         } else {
