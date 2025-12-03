@@ -30,7 +30,7 @@ use tor_error::internal;
 use tor_netdoc::doc::netstatus::ConsensusFlavor;
 
 use crate::{
-    database::{self, sql, Timestamp},
+    database::{self, sql, QueryOneExtMut, Timestamp},
     err::{DatabaseError, FatalError},
 };
 

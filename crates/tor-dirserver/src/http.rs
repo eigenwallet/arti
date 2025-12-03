@@ -37,7 +37,7 @@ use tokio::{
 };
 use tracing::warn;
 
-use crate::database::{self, sql, Sha256};
+use crate::database::{self, sql, QueryOneExtMut, Sha256};
 
 mod cache;
 

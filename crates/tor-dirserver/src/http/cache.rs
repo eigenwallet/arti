@@ -8,7 +8,7 @@ use rusqlite::{params, Transaction};
 use weak_table::WeakValueHashMap;
 
 use crate::{
-    database::{sql, Sha256},
+    database::{sql, QueryOneExtMut, Sha256},
     err::DatabaseError,
 };
 
