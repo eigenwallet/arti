@@ -73,6 +73,133 @@ use tor_netdoc::doc::{
 
 use crate::err::DatabaseError;
 
+/// Trait to provide `query_one` functionality for older versions of rusqlite.
+///
+/// This trait vendors the `query_one` method that was added in rusqlite 0.32.0
+/// (commit ae0e2fda874c3e19d69f114e0127fefe204c3f07). It allows executing a query
+/// that expects exactly one row to be returned, returning an error if no rows or
+/// multiple rows are found.
+///
+/// This is a compatibility shim for when using rusqlite < 0.32.0.
+pub(crate) trait QueryOneExt {
+    /// Execute a query that is expected to return exactly one row.
+    ///
+    /// Returns `QueryReturnedNoRows` if no rows are returned.
+    /// Returns `QueryReturnedMoreThanOneRow` if multiple rows are returned.
+    fn query_one<T, P, F>(&self, sql: &str, params: P, f: F) -> rusqlite::Result<T>
+    where
+        P: rusqlite::Params,
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>;
+}
+
+/// Trait to provide `query_one` functionality for statement types.
+///
+/// Similar to `QueryOneExt`, but for types that require mutable access.
+pub(crate) trait QueryOneExtMut {
+    /// Execute a query that is expected to return exactly one row.
+    ///
+    /// Returns `QueryReturnedNoRows` if no rows are returned.
+    /// Returns `QueryReturnedMoreThanOneRow` if multiple rows are returned.
+    fn query_one<T, P, F>(&mut self, params: P, f: F) -> rusqlite::Result<T>
+    where
+        P: rusqlite::Params,
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>;
+}
+
+impl QueryOneExt for rusqlite::Transaction<'_> {
+    fn query_one<T, P, F>(&self, sql: &str, params: P, f: F) -> rusqlite::Result<T>
+    where
+        P: rusqlite::Params,
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        let mut stmt = self.prepare(sql)?;
+        let mut rows = stmt.query(params)?;
+
+        let row = match rows.next()? {
+            Some(row) => row,
+            None => return Err(rusqlite::Error::QueryReturnedNoRows),
+        };
+
+        let result = f(row)?;
+
+        if rows.next()?.is_some() {
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+
+        Ok(result)
+    }
+}
+
+impl QueryOneExt for rusqlite::Connection {
+    fn query_one<T, P, F>(&self, sql: &str, params: P, f: F) -> rusqlite::Result<T>
+    where
+        P: rusqlite::Params,
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        let mut stmt = self.prepare(sql)?;
+        let mut rows = stmt.query(params)?;
+
+        let row = match rows.next()? {
+            Some(row) => row,
+            None => return Err(rusqlite::Error::QueryReturnedNoRows),
+        };
+
+        let result = f(row)?;
+
+        if rows.next()?.is_some() {
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+
+        Ok(result)
+    }
+}
+
+impl QueryOneExtMut for rusqlite::CachedStatement<'_> {
+    fn query_one<T, P, F>(&mut self, params: P, f: F) -> rusqlite::Result<T>
+    where
+        P: rusqlite::Params,
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        let mut rows = self.query(params)?;
+
+        let row = match rows.next()? {
+            Some(row) => row,
+            None => return Err(rusqlite::Error::QueryReturnedNoRows),
+        };
+
+        let result = f(row)?;
+
+        if rows.next()?.is_some() {
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+
+        Ok(result)
+    }
+}
+
+impl QueryOneExtMut for rusqlite::Statement<'_> {
+    fn query_one<T, P, F>(&mut self, params: P, f: F) -> rusqlite::Result<T>
+    where
+        P: rusqlite::Params,
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        let mut rows = self.query(params)?;
+
+        let row = match rows.next()? {
+            Some(row) => row,
+            None => return Err(rusqlite::Error::QueryReturnedNoRows),
+        };
+
+        let result = f(row)?;
+
+        if rows.next()?.is_some() {
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+
+        Ok(result)
+    }
+}
+
 /// Version 1 of the database schema.
 ///
 /// TODO DIRMIRROR: Before the release, figure out where to use rowid and where

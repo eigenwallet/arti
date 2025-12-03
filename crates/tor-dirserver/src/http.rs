@@ -36,7 +36,7 @@ use tokio::{
 };
 use tracing::warn;
 
-use crate::database::{self, sql, ContentEncoding, DocumentId};
+use crate::database::{self, sql, ContentEncoding, DocumentId, QueryOneExtMut};
 
 mod cache;
 

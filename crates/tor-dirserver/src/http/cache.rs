@@ -8,7 +8,7 @@ use rusqlite::{params, Transaction};
 use weak_table::WeakValueHashMap;
 
 use crate::{
-    database::{sql, DocumentId},
+    database::{sql, DocumentId, QueryOneExtMut},
     err::DatabaseError,
 };
 
