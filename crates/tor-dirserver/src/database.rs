@@ -350,7 +350,7 @@ impl ConsensusMeta {
 
         // Actually execute the query; a None is totally valid and considered as
         // no consensus being present in the current database.
-        let res = meta_stmt.query_one(named_params! {
+        let res = meta_stmt.query_row(named_params! {
             ":flavor": flavor.name(),
             ":now": now,
             ":pre_valid": tolerance.pre_valid_tolerance().as_secs().try_into().unwrap_or(i64::MAX),
@@ -379,7 +379,7 @@ impl ConsensusMeta {
             "
         ))?;
 
-        let raw = stmt.query_one(named_params! {":docid": self.docid}, |row| {
+        let raw = stmt.query_row(named_params! {":docid": self.docid}, |row| {
             row.get::<_, Vec<u8>>(0)
         })?;
         let raw = String::from_utf8(raw).map_err(into_internal!("utf-8 constraint violated?"))?;
@@ -614,7 +614,7 @@ impl AuthCertMeta {
         for kp in signatories {
             // Query the certificate from the database.
             let res = stmt
-            .query_one(
+            .query_row(
                 named_params! {
                     ":id_rsa": kp.id_fingerprint.as_hex_upper(),
                     ":sk_rsa": kp.sk_fingerprint.as_hex_upper(),
@@ -651,7 +651,7 @@ impl AuthCertMeta {
             "
         ))?;
 
-        let raw = stmt.query_one(named_params! {":docid": self.docid}, |row| {
+        let raw = stmt.query_row(named_params! {":docid": self.docid}, |row| {
             row.get::<_, Vec<u8>>(0)
         })?;
         let raw = String::from_utf8(raw).map_err(into_internal!("utf-8 constraint violated?"))?;
@@ -753,7 +753,7 @@ pub(crate) fn open<P: AsRef<Path>>(
         // 1. Checking the database schema.
         // 2. Upgrading (in future) or initializing the database schema (if empty).
 
-        let has_arti_dirserver_schema_version = match tx.query_one(
+        let has_arti_dirserver_schema_version = match tx.query_row(
             sql!(
                 "
                 SELECT name
@@ -771,7 +771,7 @@ pub(crate) fn open<P: AsRef<Path>>(
         };
 
         if has_arti_dirserver_schema_version {
-            let version = tx.query_one(
+            let version = tx.query_row(
                 sql!("SELECT version FROM arti_dirserver_schema_version WHERE rowid = 1"),
                 params![],
                 |row| row.get::<_, String>(0),
@@ -1185,7 +1185,7 @@ mod test {
 
         // Check if the version was initialized properly.
         let version = conn
-            .query_one(
+            .query_row(
                 "SELECT version FROM arti_dirserver_schema_version WHERE rowid = 1",
                 params![],
                 |row| row.get::<_, String>(0),
@@ -1219,7 +1219,7 @@ mod test {
             tx.execute_batch("DELETE FROM arti_dirserver_schema_version")
                 .unwrap();
             let e = tx
-                .query_one(
+                .query_row(
                     sql!("SELECT version FROM arti_dirserver_schema_version"),
                     params![],
                     |row| row.get::<_, String>(0),
@@ -1231,7 +1231,7 @@ mod test {
 
         // Normal check.
         let version: String = read_tx(&pool, |tx| {
-            tx.query_one(
+            tx.query_row(
                 sql!("SELECT version FROM arti_dirserver_schema_version"),
                 params![],
                 |row| row.get(0),
@@ -1259,7 +1259,7 @@ mod test {
         // Check that it was deleted.
         read_tx(&pool, |tx| {
             let e = tx
-                .query_one(
+                .query_row(
                     sql!("SELECT version FROM arti_dirserver_schema_version"),
                     params![],
                     |row| row.get::<_, String>(0),
@@ -1380,7 +1380,7 @@ mod test {
         );
 
         let res = tx
-            .query_one(
+            .query_row(
                 sql!(
                     "
                     SELECT content
