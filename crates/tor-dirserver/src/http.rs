@@ -634,7 +634,7 @@ impl HttpServer {
             "
         ))?;
         let compressed_docid =
-            stmt.query_one(params![docid, encoding.to_string()], |row| row.get(0))?;
+            stmt.query_row(params![docid, encoding.to_string()], |row| row.get(0))?;
 
         Ok(compressed_docid)
     }
