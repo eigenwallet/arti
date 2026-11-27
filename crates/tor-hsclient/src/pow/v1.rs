@@ -71,6 +71,11 @@ impl HsPowClientV1 {
     /// Specified in <https://spec.torproject.org/hspow-spec/common-protocol.html#client-timeout>
     ///
     pub(super) fn increase_effort(&mut self) {
+        // If the service didn't ask for any proof of work, a failed connection
+        // isn't a reason to start some.
+        if self.effort == Effort::zero() {
+            return;
+        }
         let effort = if self.effort < CLIENT_POW_EFFORT_DOUBLE_UNTIL {
             self.effort.saturating_mul_u32(2)
         } else {
